@@ -1,7 +1,5 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -41,7 +39,7 @@ Label.Parent = CircleFrame
 -- Создаем синее окно (изначально скрыто)
 local BlueWindow = Instance.new("Frame")
 BlueWindow.Size = UDim2.new(0, 500, 0, 400)
-BlueWindow.Position = UDim2.new(0.5, -250, 0.5, -200)
+BlueWindow.Position = UDim2.new(0.5, -150, 0.5, -100)
 BlueWindow.AnchorPoint = Vector2.new(0.5, 0.5)
 BlueWindow.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
 BlueWindow.BackgroundTransparency = 0.7
@@ -53,7 +51,7 @@ BlueWindow.Parent = ScreenGui
 -- Добавляем заголовок окну с возможностью перемещения
 local WindowTitle = Instance.new("TextLabel")
 WindowTitle.Size = UDim2.new(1, 0, 0, 40)
-WindowTitle.Text = "Меню серверов (перетащи)"
+WindowTitle.Text = "Меню"
 WindowTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 WindowTitle.BackgroundColor3 = Color3.fromRGB(0, 0, 100)
 WindowTitle.BorderSizePixel = 0
@@ -72,33 +70,6 @@ CloseButton.BorderSizePixel = 0
 CloseButton.Font = Enum.Font.SourceSansBold
 CloseButton.TextSize = 18
 CloseButton.Parent = BlueWindow
-
--- Кнопка обновления серверов
-local RefreshButton = Instance.new("TextButton")
-RefreshButton.Size = UDim2.new(0, 120, 0, 40)
-RefreshButton.Position = UDim2.new(0.5, -60, 1, -100)
-RefreshButton.Text = "🔄 Обновить"
-RefreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-RefreshButton.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-RefreshButton.BorderSizePixel = 0
-RefreshButton.Font = Enum.Font.SourceSansBold
-RefreshButton.TextSize = 18
-RefreshButton.Parent = BlueWindow
-
--- Контейнер для списка серверов
-local ServersContainer = Instance.new("ScrollingFrame")
-ServersContainer.Size = UDim2.new(0.9, 0, 0.7, 0)
-ServersContainer.Position = UDim2.new(0.05, 0, 0.15, 0)
-ServersContainer.BackgroundTransparency = 1
-ServersContainer.BorderSizePixel = 0
-ServersContainer.ScrollBarThickness = 8
-ServersContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-ServersContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ServersContainer.Parent = BlueWindow
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 5)
-UIListLayout.Parent = ServersContainer
 
 -- Квадратик для изменения размера
 local ResizeButton = Instance.new("TextButton")
@@ -120,7 +91,7 @@ local startPosition
 
 -- Размеры окна
 local MIN_SIZE = UDim2.new(0, 400, 0, 300)
-local MAX_SIZE = UDim2.new(0, 1200, 0, 800)
+local MAX_SIZE = UDim2.new(0, 1000, 0, 700)
 
 -- Переменные для перемещения
 local circleDragging = false
@@ -132,143 +103,6 @@ local windowDragInput
 local windowDragStart
 local windowStartPos
 
--- ЗАМЕНИТЕ ЭТОТ ID НА РЕАЛЬНЫЙ ID ИГРЫ "STEAL A BRAINROT"!
--- Найти ID можно в URL игры: https://www.roblox.com/games/123456789/Game-Name
-local GAME_ID = 109983668079237  -- Это пример, замените на правильный!
-
--- Функция для получения информации о серверах
-local function getServers()
-    local success, result = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. GAME_ID .. "/servers/Public?limit=100"
-        local response = game:HttpGet(url)
-        return HttpService:JSONDecode(response)
-    end)
-    
-    if success and result and result.data then
-        return result.data
-    else
-        warn("Ошибка получения серверов: ", result)
-        return {}
-    end
-end
-
--- Функция для создания кнопки сервера
-local function createServerButton(server, index)
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 0, 50)
-    button.Text = ""
-    button.BackgroundColor3 = Color3.fromRGB(30, 30, 100)
-    button.BorderSizePixel = 1
-    button.BorderColor3 = Color3.fromRGB(100, 100, 200)
-    button.AutoButtonColor = false
-    
-    local playersText = Instance.new("TextLabel")
-    playersText.Size = UDim2.new(0.3, 0, 1, 0)
-    playersText.Position = UDim2.new(0.7, 0, 0, 0)
-    playersText.Text = server.playing .. "/" .. server.maxPlayers
-    playersText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    playersText.BackgroundTransparency = 1
-    playersText.Font = Enum.Font.SourceSansBold
-    playersText.TextSize = 16
-    playersText.TextXAlignment = Enum.TextXAlignment.Right
-    playersText.Parent = button
-    
-    local serverText = Instance.new("TextLabel")
-    serverText.Size = UDim2.new(0.6, 0, 1, 0)
-    serverText.Text = "Сервер #" .. index
-    serverText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    serverText.BackgroundTransparency = 1
-    serverText.Font = Enum.Font.SourceSansBold
-    serverText.TextSize = 16
-    serverText.TextXAlignment = Enum.TextXAlignment.Left
-    serverText.Parent = button
-    
-    -- Цвет в зависимости от онлайна
-    if server.playing >= server.maxPlayers - 2 then
-        button.BackgroundColor3 = Color3.fromRGB(100, 0, 0) -- Полный
-        playersText.TextColor3 = Color3.fromRGB(255, 100, 100)
-    elseif server.playing >= server.maxPlayers / 2 then
-        button.BackgroundColor3 = Color3.fromRGB(100, 100, 0) -- Средний
-        playersText.TextColor3 = Color3.fromRGB(255, 255, 100)
-    else
-        button.BackgroundColor3 = Color3.fromRGB(0, 100, 0) -- Пустой
-        playersText.TextColor3 = Color3.fromRGB(100, 255, 100)
-    end
-    
-    -- Анимация при наведении
-    button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = button.BackgroundColor3 + Color3.fromRGB(30, 30, 30)
-    end)
-    
-    button.MouseLeave:Connect(function()
-        if server.playing >= server.maxPlayers - 2 then
-            button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-        elseif server.playing >= server.maxPlayers / 2 then
-            button.BackgroundColor3 = Color3.fromRGB(100, 100, 0)
-        else
-            button.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-        end
-    end)
-    
-    -- Функция телепорта
-    button.MouseButton1Click:Connect(function()
-        print("🚀 Телепортация на сервер #" .. index)
-        TeleportService:TeleportToPlaceInstance(GAME_ID, server.id, player)
-    end)
-    
-    return button
-end
-
--- Функция обновления списка серверов
-local function updateServerList()
-    -- Очищаем контейнер
-    for _, child in ipairs(ServersContainer:GetChildren()) do
-        if child:IsA("TextButton") or child:IsA("TextLabel") then
-            child:Destroy()
-        end
-    end
-    
-    local loadingText = Instance.new("TextLabel")
-    loadingText.Size = UDim2.new(1, 0, 0, 30)
-    loadingText.Text = "🔄 Загрузка серверов..."
-    loadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    loadingText.BackgroundTransparency = 1
-    loadingText.Font = Enum.Font.SourceSansBold
-    loadingText.TextSize = 16
-    loadingText.Parent = ServersContainer
-    
-    -- Задержка для анимации загрузки
-    task.wait(0.5)
-    
-    local servers = getServers()
-    loadingText:Destroy()
-    
-    if #servers == 0 then
-        local noServers = Instance.new("TextLabel")
-        noServers.Size = UDim2.new(1, 0, 0, 50)
-        noServers.Text = "❌ Серверы не найдены\nПроверьте ID игры!"
-        noServers.TextColor3 = Color3.fromRGB(255, 100, 100)
-        noServers.BackgroundTransparency = 1
-        noServers.Font = Enum.Font.SourceSansBold
-        noServers.TextSize = 16
-        noServers.TextWrapped = true
-        noServers.Parent = ServersContainer
-        return
-    end
-    
-    -- Берем первые 6 серверов
-    local brainrotServers = {}
-    for i = 1, math.min(6, #servers) do
-        table.insert(brainrotServers, servers[i])
-    end
-    
-    -- Создаем кнопки серверов
-    for i, server in ipairs(brainrotServers) do
-        local button = createServerButton(server, i)
-        button.Parent = ServersContainer
-    end
-end
-
 -- Функция для открытия/закрытия окна
 local function toggleWindow()
     if BlueWindow.Visible then
@@ -277,7 +111,6 @@ local function toggleWindow()
     else
         BlueWindow.Visible = true
         CircleFrame.Visible = false
-        updateServerList()
     end
 end
 
@@ -420,8 +253,4 @@ CloseButton.MouseButton1Click:Connect(function()
     toggleWindow()
 end)
 
--- Обработчик кнопки обновления
-RefreshButton.MouseButton1Click:Connect(function()
-    updateServerList()
-    print("🔄 Список серверов обновлен!")
-end)
+print("✅ Меню загружено! Используйте круг для открытия/перемещения")
